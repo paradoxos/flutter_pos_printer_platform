@@ -38,8 +38,7 @@ class USBPrinterService private constructor(private val mHandler: Handler) {
                         mUsbDevice = usbDevice
                         mHandler.obtainMessage(STATE_USB_CONNECTED).sendToTarget()
                     } else {
-                        Toast.makeText(context, "User refused to give USB device permission: " + usbDevice!!.deviceName, Toast.LENGTH_LONG)
-                            .show()
+                        Toast.makeText(context, "User refused to give USB device permission: ${usbDevice?.deviceName ?: "Unknown Device"}", Toast.LENGTH_LONG).show()
                         mHandler.obtainMessage(STATE_USB_NONE).sendToTarget()
                     }
                 }
@@ -95,24 +94,28 @@ class USBPrinterService private constructor(private val mHandler: Handler) {
         }
 
     fun selectDevice(vendorId: Int, productId: Int): Boolean {
-        if ((mUsbDevice == null) || (mUsbDevice!!.vendorId != vendorId) || (mUsbDevice!!.productId != productId)) {
-            synchronized(printLock) {
-                closeConnectionIfExists()
-                val usbDevices: List<UsbDevice> = deviceList
-                for (usbDevice: UsbDevice in usbDevices) {
-                    if ((usbDevice.vendorId == vendorId) && (usbDevice.productId == productId)) {
-                        Log.v(LOG_TAG, "Request for device: vendor_id: " + usbDevice.vendorId + ", product_id: " + usbDevice.productId)
-                        closeConnectionIfExists()
+        synchronized(printLock) {
+            val usbDevices: List<UsbDevice> = deviceList
+            for (usbDevice: UsbDevice in usbDevices) {
+                if (usbDevice.vendorId == vendorId && usbDevice.productId == productId) {
+                    Log.v(LOG_TAG, "Found device: vendor_id: ${usbDevice.vendorId}, product_id: ${usbDevice.productId}")
+                    if (!mUSBManager!!.hasPermission(usbDevice)) {
+                        Log.v(LOG_TAG, "Requesting permission for device")
                         mUSBManager!!.requestPermission(usbDevice, mPermissionIndent)
                         mHandler.obtainMessage(STATE_USB_CONNECTING).sendToTarget()
-                        return true
+                    } else {
+                        Log.v(LOG_TAG, "Already have permission for device")
+                        mUsbDevice = usbDevice
+                        mHandler.obtainMessage(STATE_USB_CONNECTED).sendToTarget()
                     }
+                    return true
                 }
-                return false
             }
+            Log.v(LOG_TAG, "Device not found or already selected")
+            return false
         }
-        return true
     }
+
 
     private fun openConnection(): Boolean {
         if (mUsbDevice == null) {
