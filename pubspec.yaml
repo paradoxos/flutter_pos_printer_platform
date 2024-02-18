@@ -13,7 +13,7 @@ dependencies:
 
   flutter_star_prnt:
     git:
-      url: https://github.com/dibg/flutter_star_prnt.git
+      url: https://github.com/paradoxos/flutter_star_prnt.git
   enum_to_string: ^2.0.1
   image: ^3.0.8
 
